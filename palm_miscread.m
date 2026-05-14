@@ -22,12 +22,16 @@ function X = palm_miscread(filename,varargin)
 % X.extra     : Contain extra information, depending on the kind
 %               of data that was read and the function or
 %               program used for reading.
+% affine      : Affine matrix, to be used only for information hence
+%               here in a consistent place for different formats.
+%               The affine matrix that matters when saving the data is
+%               the one inside extras.
 %
 % _____________________________________
 % Anderson M. Winkler
 % FMRIB / University of Oxford
 % Aug/2013 (first version)
-% May/2025 (this version)
+% Mar/2026 (this version)
 % http://brainder.org
 
 % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -100,11 +104,13 @@ switch lower(fext{end})
 
         % Read a generic text file
         X.readwith = 'textscan';
-        fid = fopen(X.filename);
-        X.data = textscan(fid,'%s');
-        X.data = X.data{1};
+        fid        = fopen(X.filename);
+        X.data     = textscan(fid,'%s');
+        X.data     = X.data{1};
         fclose(fid);
-        X.extra = [];
+        X.extra    = [];
+        X.affine   = NaN;
+        X.size     = size(X.data);
 
     case 'csv'
 
@@ -113,20 +119,26 @@ switch lower(fext{end})
         % 'textscan', which on its turn has a limitation of 100k columns.
         % Using 'load' bypass this issue.
         X.readwith = 'load';
-        X.data = load(X.filename);
-        X.extra = [];
+        X.data     = load(X.filename);
+        X.extra    = [];
+        X.affine   = NaN;
+        X.size     = size(X.data);
 
     case {'mat','con','fts','grp'}
 
         % Read an FSL "VEST" file.
         X.readwith = 'vestread';
         [X.data,X.extra.PPH] = palm_vestread(X.filename);
+        X.affine   = NaN;
+        X.size     = size(X.data);
 
     case 'mset'
 
         % Set of matrices
         X.readwith = 'mset';
-        X.data = palm_msetread(X.filename);
+        X.data     = palm_msetread(X.filename);
+        X.affine   = NaN;
+        X.size     = size(X.data);
 
     case 'gz'
 
@@ -153,11 +165,20 @@ switch lower(fext{end})
                         X.readwith  = 'ipt';
                         X.extra.hdr = niftiinfo(X.filename);
                         X.data      = niftiread(X.filename);
+                        X.affine    = X.extra.hdr.Transform.T';
+                        X.size      = size(X.data);
                     else
                         X.readwith  = 'fs_load_nifti';
                         X.extra.hdr = load_nifti(X.filename);
                         X.data      = X.extra.hdr.vol;
                         X.extra.hdr.vol = [];
+                        if X.extra.hdr.qform_code > 0 % qform visited first
+                            X.affine = X.extra.hdr.qform;
+                        end
+                        if X.extra.hdr.sform_code > 0 % but sform will prevail
+                            X.affine = X.extra.hdr.sform;
+                        end
+                        X.size      = size(X.data);
                     end
                 end
             end
@@ -177,45 +198,64 @@ switch lower(fext{end})
             X.extra.diminfo  = tmp.diminfo;
             X.extra.metadata = tmp.metadata;
             X.extra.cifti_file_extension = fext{end-1};
+            X.affine = NaN;
+            X.size = size(X.data);
 
         else
             % Read a NIFTI file. Note that this will should not
             % be used for ANALYZE.
             if useniiclass
                 X.readwith = 'nifticlass';
-                X.extra = nifti(X.filename);
-                X.data = X.extra.dat;
+                X.extra    = nifti(X.filename);
+                X.data     = X.extra.dat;
+                X.affine   = X.extra.mat;
+                X.size     = size(X.data);
             else
                 if ext.ipt
                     X.readwith  = 'ipt';
                     X.extra.hdr = niftiinfo(X.filename);
                     X.data      = niftiread(X.filename);
+                    X.affine    = X.extra.hdr.Transform.T';
+                    X.size      = size(X.data);
                 else
                     X.readwith  = 'fs_load_nifti';
                     X.extra.hdr = load_nifti(X.filename);
                     X.data      = X.extra.hdr.vol;
                     X.extra.hdr.vol = [];
+                    if X.extra.hdr.qform_code > 0 % qform visited first
+                        X.affine = X.extra.hdr.qform;
+                    end
+                    if X.extra.hdr.sform_code > 0 % but sform will prevail
+                        X.affine = X.extra.hdr.sform;
+                    end
+                    X.size = size(X.data);
                 end
             end
         end
 
-    case {'dpv','dpf','dpx'}
+    case {'dpv','dpf','dpx','asc'}
 
         % Read a DPV/DPF file, in ASCII
         X.readwith = 'dpxread';
         [X.data,X.extra.crd,X.extra.idx] = palm_dpxread(X.filename);
+        X.affine   = NaN;
+        X.size     = size(X.data);
 
     case 'srf'
 
         % Read a SRF file, in ASCII
         X.readwith = 'srfread';
         [X.data.vtx,X.data.fac] = palm_srfread(X.filename);
+        X.affine   = NaN;
+        X.size     = NaN;
 
     case 'obj'
 
         % Read a Wavefront file
         X.readwith = 'wavefront';
         [X.data.vtx,X.data.fac,X.extra] = palm_objread(X.filename);
+        X.affine   = NaN;
+        X.size     = NaN;
 
     case 'mz3'
 
@@ -226,17 +266,22 @@ switch lower(fext{end})
             X.data.vtx = vtx;
             X.data.fac = fac;
             X.extra.colour = colour;
+            X.size     = NaN;
         else
             X.data = colour;
             X.extra.vtx = vtx;
             X.extra.fac = fac;
+            X.size      = size(X.data);
         end
+        X.affine   = NaN;
 
     case optsx.fscurv
 
         % Read a FreeSurfer curvature file
         X.readwith = 'fs_read_curv';
         [X.data,X.extra.fnum] = read_curv(X.filename);
+        X.affine   = NaN;
+        X.size     = size(X.data);
 
     case optsx.fssurf
 
@@ -244,18 +289,24 @@ switch lower(fext{end})
         X.readwith = 'fs_read_surf';
         [X.data.vtx,X.data.fac] = read_surf(X.filename);
         X.data.fac = X.data.fac + 1;
+        X.affine   = NaN;
+        X.size     = NaN;
 
     case {'mgh','mgz'}
 
         % Read a FreeSurfer MGH/MGZ file
         X.readwith = 'fs_load_mgh';
         [X.data,X.extra.M,X.extra.mr_parms,X.extra.volsz] = load_mgh(X.filename);
+        X.affine   = X.extra.M;
+        X.size     = size(X.data);
 
     case 'annot'
 
         % Read a FreeSurfer annotation file
         X.readwith = 'fs_load_annot';
         [X.extra.vertices,X.extra.codedlabel,X.extra.colourtab] = read_annotation(X.filename);
+        X.affine   = NaN;
+        X.size     = size(X.data);
 
         % For each structure, replace its label by its index, which
         % is the actual label
@@ -281,9 +332,20 @@ switch lower(fext{end})
                 vtx = vtx * gii.mat;
                 X.data.vtx = vtx(:,1:3);
                 X.extra.mat = gii.mat';
+                X.affine = X.extra.mat;
+            else
+                X.affine = NaN;
             end
+            X.size = NaN;
         elseif isfield(gii,'cdata')
             X.data = gii.cdata';
+            if isfield(gii,'mat')
+                X.extra.mat = gii.mat';
+                X.affine = X.extra.mat;
+            else
+                X.affine = NaN;
+            end
+            X.size = size(X.data);
         else
             error('Invalid GIFTI file: %s',X.filename);
         end

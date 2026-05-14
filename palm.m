@@ -24,10 +24,6 @@ function palm(varargin)
 % along with this program.  If not, see <http://www.gnu.org/licenses/>.
 % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-% This is redundant in when running as a function as all files should
-% be together, but it helps when running from the shell
-addpath(fileparts(mfilename('fullpath')));
-
 % If Octave
 if palm_isoctave
     
@@ -48,6 +44,7 @@ if palm_isoctave
     warning('off','Octave:precedence-change');
     warning('off','Octave:possible-matlab-short-circuit-operator');
     warning('off','Octave:function-name-clash');
+    warning('off','Octave:shadowed-function');
     
 else
     % This line marks the place up to nothing will be printed. It's long as
@@ -55,6 +52,10 @@ else
     % purposeful from the outside :-)
     fprintf('.......................................................................\n');
 end
+
+% This is redundant in when running as a function as all files should
+% be together, but it helps when running from the shell
+addpath(fileparts(mfilename('fullpath')));
 
 % This is probably redundant but fixes a bug in an old Matlab version
 nargin = numel(varargin);
@@ -64,15 +65,19 @@ if nargin == 0 || strcmp(varargin{1},'-q')
     palm_help('basic');
     return;
 elseif nargin == 1
-    if any(strcmpi(varargin{1},{'-help','-?','-basic'}))
-        palm_help('basic');
-        return;
-    elseif strcmpi(varargin{1},'-advanced')
-        palm_help('advanced');
-        return;
-    elseif strcmpi(varargin{1},'-checkprogs')
-        palm_checkprogs;
-        return;
+    switch varargin{1}
+        case {'-help','-?','-basic'}
+            palm_help('basic');
+            return;
+        case '-advanced'
+            palm_help('advanced');
+            return;
+        case '-refs'
+            palm_help('refs');
+            return;
+        case '-checkprogs'
+            palm_checkprogs;
+            return;
     end
 end
 palm_help('logo');

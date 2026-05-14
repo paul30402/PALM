@@ -1,4 +1,4 @@
-function S = palm_maskstruct(mask,readwith,extra)
+function S = palm_maskstruct(mask,readwith,extra,affine,size)
 % Create a struct for a mask, as if it had been read from a file.
 % This is useful to save later the data.
 %
@@ -11,6 +11,8 @@ function S = palm_maskstruct(mask,readwith,extra)
 %            original data. See 'palm_miscread.m' for help.
 % extra    : A struct that varies according to which function
 %            was used to read the data.
+% affine   : Affine matrix, used for testing sizes.
+% size     : Size of the original data
 %
 % Usage:
 % S        : A struct derived from the 'extra' argument along
@@ -92,7 +94,7 @@ switch lower(readwith)
         S.extra.mat     = extra.mat;
         S.extra.dat.dim = extra.dat.dim;
         
-    case 'spm_spm_vol'
+    case 'spm_spm_vol' % no longer used
         
         % If the original data is NIFTI and was read with SPM.
         S.data           = palm_conv2toN(mask,extra(1).dim(1:3));
@@ -111,7 +113,7 @@ switch lower(readwith)
         S.extra.hdr.datatype   = 64;
         S.extra.hdr.bitpix     = 64;
         
-    case 'fsl_read_avw'
+    case 'fsl_read_avw' % no longer used
         
         % If the original data is NIFTI and was read with FSL.
         S.data  = palm_conv2toN(mask,extra.dims(1:3));
@@ -120,7 +122,7 @@ switch lower(readwith)
             S.extra.vtype = 'd';
         end
         
-    case 'nii_load_nii'
+    case 'nii_load_nii' % no longer used
         
         % If the original data is NIFTI and was read with the NIFTI toolbox.
         S.data                      = palm_conv2toN(mask,extra.hdr.dime.dim(2:4));
@@ -152,3 +154,5 @@ switch lower(readwith)
     otherwise
         error('Unknown format: %s',readwith);
 end
+S.affine = affine;
+S.size   = size;
