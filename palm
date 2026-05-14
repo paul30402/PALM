@@ -30,7 +30,7 @@
 # can be expensive, or may bother other users in a network if the number of
 # licenses available is limited), is slower to load, but runs faster
 # once loaded. In the variable below, use 1 for Octave, 2 for Matlab:
-WHICH_TO_RUN=1
+WHICH_TO_RUN=2
 
 # If Octave isn't in the path, or to use a specific version, add here the
 # path or command that invokes the Octave executable binary.
@@ -41,14 +41,14 @@ OCTAVEBIN=/usr/bin/octave
 # If Matlab isn't in the path, or to use a specific version, add here the
 # path or command that invokes the Matlab executable binary.
 # This only has effect if WHICH_TO_RUN above os set as 2.
-MATLABBIN=/opt/r16b/bin/matlab
+MATLABBIN=/usr/local/bin/MATLAB/bin/matlab
 #MATLABBIN=/Applications/MATLAB_R2023a.app/bin/matlab
 
 # If you are intending to run PALM in a cluster, for some environments
 # it may be necessary to change the variable below to 1.
 # In this case, also, provide the path to a temporary directory where
 # a tiny temporary file can be saved.
-IS_CLUSTER=0
+IS_CLUSTER=1
 TEMP_DIR=/tmp
 
 # If you are using MATLAB and wish to use more than one compute thread
